@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "vgdb",
+            "request": "launch",
+            "name": "C/C++ Debug Launch",
+            "debugger": "gdb",
+            "program": "${workspaceFolder}/build/bin/dso_dataset",
+            "args": ["files=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/images.zip", "calib=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/camera.txt", "gamma=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/pcalib.txt", "vignette=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/vignette.png", "preset=0", "mode=0"],
+            "cwd": ""
+        },
+        {
+            "name": "C++ Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/bin/dso_dataset",
+            "stopAtEntry": true,
+            "args": ["files=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/images.zip", "calib=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/camera.txt", "gamma=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/pcalib.txt", "vignette=/home/helei/data_set/TMU/TMU_monoVO/sequence_01/vignette.png", "preset=0", "mode=0"],
+            "environment": [{ "name": "config", "value": "Debug" }],
+            "cwd": "${workspaceFolder}"
+        }
+
+    ]
+}

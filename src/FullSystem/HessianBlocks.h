@@ -55,7 +55,7 @@ class FrameShell;
 class EFFrame;
 class EFPoint;
 
-#define SCALE_IDEPTH 1.0f		// scales internal value to idepth.
+#define SCALE_IDEPTH 1.0f		// scales internal value to idepth.  尽量把各个数据的数量级拉到一起进行优化
 #define SCALE_XI_ROT 1.0f
 #define SCALE_XI_TRANS 0.5f
 #define SCALE_F 50.0f
@@ -147,8 +147,8 @@ struct FrameHessian
 
 	// variable info.
 	SE3 worldToCam_evalPT;
-	Vec10 state_zero;
-	Vec10 state_scaled;
+	Vec10 state_zero;  //! [0-5: worldToCam-leftEps. 位姿的增量 相对于固定线性化点的 6-7: a,b]
+	Vec10 state_scaled;  //! 乘以比例系数的状态增量
 	Vec10 state;	// [0-5: worldToCam-leftEps. 6-7: a,b]
 	Vec10 step;
 	Vec10 step_backup;

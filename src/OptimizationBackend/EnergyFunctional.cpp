@@ -206,9 +206,9 @@ void EnergyFunctional::accumulateAF_MT(MatXX &H, VecX &b, bool MT)
 	}
 	else
 	{
-		accSSE_top_A->setZero(nFrames);
+		accSSE_top_A->setZero(nFrames);  //! 初始化
 		for(EFFrame* f : frames)
-			for(EFPoint* p : f->points)
+			for(EFPoint* p : f->points)  //! 逐点添加
 				accSSE_top_A->addPoint<0>(p,this);
 		accSSE_top_A->stitchDoubleMT(red,H,b,this,false,false);
 		resInA = accSSE_top_A->nres[0];
@@ -303,15 +303,15 @@ void EnergyFunctional::resubstituteFPt(
 			continue;
 		}
 		float b = p->bdSumF;
-		b -= xc.dot(p->Hcd_accAF + p->Hcd_accLF);
+		b -= xc.dot(p->Hcd_accAF + p->Hcd_accLF);   //! 减去逆深度和内参
 
 		for(EFResidual* r : p->residualsAll)
 		{
 			if(!r->isActive()) continue;
-			b -= xAd[r->hostIDX*nFrames + r->targetIDX] * r->JpJdF;
+			b -= xAd[r->hostIDX*nFrames + r->targetIDX] * r->JpJdF;  //! 绝对变相对 采用伴随矩阵的性质
 		}
 
-		p->data->step = - b*p->HdiF;
+		p->data->step = - b*p->HdiF;  //! 逆深度的增量
 		assert(std::isfinite(p->data->step));
 	}
 }
@@ -426,7 +426,7 @@ EFResidual* EnergyFunctional::insertResidual(PointFrameResidual* r)
 	r->efResidual = efr;
 	return efr;
 }
-EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
+EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)  //! 插入帧
 {
 	EFFrame* eff = new EFFrame(fh);
 	eff->idx = frames.size();
@@ -459,7 +459,7 @@ EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 
 	return eff;
 }
-EFPoint* EnergyFunctional::insertPoint(PointHessian* ph)
+EFPoint* EnergyFunctional::insertPoint(PointHessian* ph)  //! 插入点
 {
 	EFPoint* efp = new EFPoint(ph, ph->host->efFrame);
 	efp->idxInPoints = ph->host->efFrame->points.size();
@@ -715,7 +715,7 @@ void EnergyFunctional::removePoint(EFPoint* p)
 	delete p;
 }
 
-void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
+void EnergyFunctional::orthogonalize(VecX* b, MatXX* H) //! 完成正交投影
 {
 //	VecX eigenvaluesPre = H.eigenvalues().real();
 //	std::sort(eigenvaluesPre.data(), eigenvaluesPre.data()+eigenvaluesPre.size());
@@ -759,7 +759,7 @@ void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
 	MatXX NNpiT = N*Npi.transpose(); 	// [dim] x [dim].
 	MatXX NNpiTS = 0.5*(NNpiT + NNpiT.transpose());	// = N * (N' * N)^-1 * N'.
 
-	if(b!=0) *b -= NNpiTS * *b;
+	if(b!=0) *b -= NNpiTS * *b;  //! 把变量投影到零空间上，然后减去
 	if(H!=0) *H -= NNpiTS * *H * NNpiTS;
 
 
@@ -772,7 +772,7 @@ void EnergyFunctional::orthogonalize(VecX* b, MatXX* H)
 }
 
 
-void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* HCalib)
+void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* HCalib)  //! HCalib为当前内参
 {
 	if(setting_solverMode & SOLVER_USE_GN) lambda=0;
 	if(setting_solverMode & SOLVER_FIX_LAMBDA) lambda = 1e-5;
@@ -780,22 +780,22 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 	assert(EFDeltaValid);
 	assert(EFAdjointsValid);
 	assert(EFIndicesValid);
-
+//! 此处开始就是矩阵构造了
 	MatXX HL_top, HA_top, H_sc;
 	VecX  bL_top, bA_top, bM_top, b_sc;
 
-	accumulateAF_MT(HA_top, bA_top,multiThreading);
+	accumulateAF_MT(HA_top, bA_top,multiThreading); //! 针对新的残差，使用当前的残差，没有逆深度的部分
 
 
-	accumulateLF_MT(HL_top, bL_top,multiThreading);
-
-
-
-	accumulateSCF_MT(H_sc, b_sc,multiThreading);
+	accumulateLF_MT(HL_top, bL_top,multiThreading);  //! 据说没有用到
 
 
 
-	bM_top = (bM+ HM * getStitchedDeltaF());
+	accumulateSCF_MT(H_sc, b_sc,multiThreading);  //! 关于逆深度的Schur部分
+
+
+
+	bM_top = (bM+ HM * getStitchedDeltaF());  //! 由于固定线性化点，每次迭代更新残差 bM未线性化点处的残差
 
 
 
@@ -807,7 +807,7 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 	VecX bFinal_top;
 
 	if(setting_solverMode & SOLVER_ORTHOGONALIZE_SYSTEM)
-	{
+	{//! 这段不用
 		// have a look if prior is there.
 		bool haveFirstFrame = false;
 		for(EFFrame* f : frames) if(f->frameID==0) haveFirstFrame=true;
@@ -838,9 +838,9 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 	else
 	{
 
-
-		HFinal_top = HL_top + HM + HA_top;
-		bFinal_top = bL_top + bM_top + bA_top - b_sc;
+//! 正式开始
+		HFinal_top = HL_top + HM + HA_top;  //! 好像是由三部分组成， L, M, A HL_TOP(68, 68), HM(68, 68), HA_TOP(68, 68)  最大好像也就68*68  也就是8个frame×8 + 4
+		bFinal_top = bL_top + bM_top + bA_top - b_sc;  //! bFinal_top(68, 1) = bL_top(68, 1) + bM_top(68, 1) + bA_top(68, 1) - b_sc(68, 1)
 
 		lastHS = HFinal_top - H_sc;
 		lastbS = bFinal_top;
@@ -886,10 +886,10 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
 
 	}
 	else
-	{
-		VecX SVecI = (HFinal_top.diagonal()+VecX::Constant(HFinal_top.cols(), 10)).cwiseSqrt().cwiseInverse();
-		MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
-		x = SVecI.asDiagonal() * HFinalScaled.ldlt().solve(SVecI.asDiagonal() * bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
+	{//! 使用这个
+		VecX SVecI = (HFinal_top.diagonal()+VecX::Constant(HFinal_top.cols(), 10)).cwiseSqrt().cwiseInverse(); //! (68, 1)
+		MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();  
+		x = SVecI.asDiagonal() * HFinalScaled.ldlt().solve(SVecI.asDiagonal() * bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;  x为68维
 	}
 
 

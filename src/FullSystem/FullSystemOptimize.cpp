@@ -295,7 +295,7 @@ bool FullSystem::doStepFromBackup(float stepfacC,float stepfacT,float stepfacR,f
 
 
 	EFDeltaValid=false;
-	setPrecalcValues();
+	setPrecalcValues();  //! 更新相对位姿
 
 
 
@@ -442,7 +442,7 @@ float FullSystem::optimize(int mnumOptIts)
         printf("OPTIMIZE %d pts, %d active res, %d lin res!\n",ef->nPoints,(int)activeResiduals.size(), numLRes);
 
 
-	Vec3 lastEnergy = linearizeAll(false);
+	Vec3 lastEnergy = linearizeAll(false);  //! 求Jacobian，求解能量
 	double lastEnergyL = calcLEnergy();
 	double lastEnergyM = calcMEnergy();
 
@@ -474,7 +474,7 @@ float FullSystem::optimize(int mnumOptIts)
 		// solve!
 		backupState(iteration!=0);
 		//solveSystemNew(0);
-		solveSystem(iteration, lambda);
+		solveSystem(iteration, lambda);  //! 求解，得到step，也就是delta x， x为状态向量
 		double incDirChange = (1e-20 + previousX.dot(ef->lastX)) / (1e-20 + previousX.norm() * ef->lastX.norm());
 		previousX = ef->lastX;
 
@@ -489,7 +489,7 @@ float FullSystem::optimize(int mnumOptIts)
 			if(stepsize <0.25) stepsize=0.25;
 		}
 
-		bool canbreak = doStepFromBackup(stepsize,stepsize,stepsize,stepsize,stepsize);
+		bool canbreak = doStepFromBackup(stepsize,stepsize,stepsize,stepsize,stepsize);  //! 应用step，更新状态
 
 
 
@@ -497,7 +497,7 @@ float FullSystem::optimize(int mnumOptIts)
 
 
 
-		// eval new energy!
+		// eval new energy!  再次线性化，求解能量
 		Vec3 newEnergy = linearizeAll(false);
 		double newEnergyL = calcLEnergy();
 		double newEnergyM = calcMEnergy();
@@ -519,7 +519,7 @@ float FullSystem::optimize(int mnumOptIts)
 
 		if(setting_forceAceptStep || (newEnergy[0] +  newEnergy[1] +  newEnergyL + newEnergyM <
 				lastEnergy[0] + lastEnergy[1] + lastEnergyL + lastEnergyM))
-		{
+		{//! 接受
 
 			if(multiThreading)
 				treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0, activeResiduals.size(), 50);
@@ -533,7 +533,7 @@ float FullSystem::optimize(int mnumOptIts)
 			lambda *= 0.25;
 		}
 		else
-		{
+		{//! 不接受
 			loadSateBackup();
 			lastEnergy = linearizeAll(false);
 			lastEnergyL = calcLEnergy();
@@ -582,7 +582,7 @@ float FullSystem::optimize(int mnumOptIts)
 				" " << ef->resInM << "\n";
 		calibLog->flush();
 	}
-
+//! 把优化的结果更新到shell中
 	{
 		boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
 		for(FrameHessian* fh : frameHessians)
@@ -596,7 +596,7 @@ float FullSystem::optimize(int mnumOptIts)
 
 
 	debugPlotTracking();
-
+//! 返回平均误差rmse
 	return sqrtf((float)(lastEnergy[0] / (patternNum*ef->resInA)));
 
 }
@@ -607,7 +607,7 @@ float FullSystem::optimize(int mnumOptIts)
 
 void FullSystem::solveSystem(int iteration, double lambda)
 {
-	ef->lastNullspaces_forLogging = getNullspaces(
+	ef->lastNullspaces_forLogging = getNullspaces(  //! 求零空间
 			ef->lastNullspaces_pose,
 			ef->lastNullspaces_scale,
 			ef->lastNullspaces_affA,

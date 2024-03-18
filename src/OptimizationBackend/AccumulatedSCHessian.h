@@ -119,7 +119,7 @@ public:
 		}
 		else
 		{
-			H = MatXX::Zero(nframes[0]*8+CPARS, nframes[0]*8+CPARS);
+			H = MatXX::Zero(nframes[0]*8+CPARS, nframes[0]*8+CPARS);  //! 构造H矩阵
 			b = VecX::Zero(nframes[0]*8+CPARS);
 			stitchDoubleInternal(&H, &b, EF,0,nframes[0]*nframes[0],0,-1);
 		}
